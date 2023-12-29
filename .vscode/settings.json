@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "*.cps": "javascript",
-        "plyconfig.json": "jsonc"
-    }
-}
