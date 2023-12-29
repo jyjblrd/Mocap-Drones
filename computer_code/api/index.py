@@ -11,15 +11,51 @@ from flask_socketio import SocketIO
 import copy
 import time
 import serial
+import sys
+import glob
 import threading
 from ruckig import InputParameter, OutputParameter, Result, Ruckig
 from flask_cors import CORS
 import json
 
+def serial_ports():
+    """ https://stackoverflow.com/questions/12090503/listing-available-com-ports-with-python
+
+        Lists serial port names
+
+        :raises EnvironmentError:
+            On unsupported or unknown platforms
+        :returns:
+            A list of the serial ports available on the system
+    """
+    if sys.platform.startswith('win'):
+        ports = ['COM%s' % (i + 1) for i in range(256)]
+    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        # this excludes your current terminal "/dev/tty"
+        ports = glob.glob('/dev/tty[A-Za-z]*')
+    elif sys.platform.startswith('darwin'):
+        ports = glob.glob('/dev/cu.usbserial-*')
+    else:
+        raise EnvironmentError('Unsupported platform')
+
+    result = []
+    for port in ports:
+        try:
+            s = serial.Serial(port)
+            s.close()
+            result.append(port)
+        except (OSError, serial.SerialException):
+            pass
+    return result
+
 serialLock = threading.Lock()
 
-ser = serial.Serial("/dev/cu.usbserial-02X2K2GE", 1000000, write_timeout=1, )
 
+
+
+list = serial_ports()
+ser = serial.Serial(list[0], 1000000, write_timeout=1, )
+print(list)
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins='*')
@@ -27,6 +63,7 @@ socketio = SocketIO(app, cors_allowed_origins='*')
 cameras_init = False
 
 num_objects = 2
+
 
 @app.route("/api/camera-stream")
 def camera_stream():
